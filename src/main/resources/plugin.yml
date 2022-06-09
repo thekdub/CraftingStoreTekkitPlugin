@@ -1,0 +1,14 @@
+name: CraftingStore
+main: com.thekdub.craftingstore.CraftingStore
+version: 1.0.0
+author: TheKDub
+commands:
+  csreload:
+    description: Reload the CraftingStore Plugin.
+    permission: craftingstore.reload
+    usage: /CSReload
+
+permissions:
+  craftingstore.reload:
+    description: Grant access to /CSReload.
+    default: op
