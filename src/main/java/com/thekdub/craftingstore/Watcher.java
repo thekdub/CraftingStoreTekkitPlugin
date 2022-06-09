@@ -2,7 +2,6 @@ package com.thekdub.craftingstore;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.OkHttpClient;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -12,17 +11,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class Watcher implements Runnable {
 
   private final File dataFile = new File(CraftingStore.getInstance().getDataFolder() + File.separator + "data.yml");
   private final YamlConfiguration dataStore = YamlConfiguration.loadConfiguration(dataFile);
   private final HashSet<Command> pending = new HashSet<>();
-  private long lastID = 0;
 
   public Watcher() {
-    lastID = dataStore.getLong("lastID", 0);
     ObjectMapper mapper = new ObjectMapper();
     dataStore.getStringList("pending").stream().map(str -> {
       try {
@@ -43,16 +39,13 @@ public class Watcher implements Runnable {
     ArrayList<Integer> completed = new ArrayList<>();
     if (queue.isSuccess()) {
       CraftingStore.getLog().log("[SUCCESS] Command retrieval completed!");
-      queue.getResult().stream().filter(command -> command.getId() > lastID && !pending.contains(command))
+      queue.getResult().stream().filter(command -> !pending.contains(command))
             .forEach(command -> {
               if (command.getMcName() == null ||
                     (command.isRequireOnline() && Bukkit.getPlayer(command.getMcName()) != null)) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.getCommand());
                 CraftingStore.getLog().log("[PROCESSED] " + command);
                 completed.add(command.getId());
-                if (command.getId() > lastID) {
-                  lastID = command.getId();
-                }
               }
               else {
                 pending.add(command);
@@ -64,9 +57,6 @@ public class Watcher implements Runnable {
           Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.getCommand());
           CraftingStore.getLog().log("[PROCESSED] " + command);
           completed.add(command.getId());
-          if (command.getId() > lastID) {
-            lastID = command.getId();
-          }
           pending.remove(command);
         }
       });
@@ -90,7 +80,6 @@ public class Watcher implements Runnable {
   }
 
   public void save() {
-    dataStore.set("lastID", lastID);
     dataStore.set("pending", pending.stream().map(Command::toString).collect(Collectors.toList()));
     try {
       dataStore.save(dataFile);

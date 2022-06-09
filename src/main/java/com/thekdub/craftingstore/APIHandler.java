@@ -1,8 +1,10 @@
 package com.thekdub.craftingstore;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.*;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
@@ -14,12 +16,10 @@ import org.apache.http.util.EntityUtils;
 
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
 
 public class APIHandler {
@@ -30,6 +30,20 @@ public class APIHandler {
         .callTimeout(10, TimeUnit.SECONDS)
         .readTimeout(10, TimeUnit.SECONDS)
         .build();
+  private static final HttpClient httpClient;
+
+  static {
+    HttpClient client;
+    try {
+      SSLContext context = SSLContext.getInstance("TLSv1.2");
+      context.init(null, null, null);
+      client = HttpClients.custom().setSSLContext(context).build();
+    } catch (NoSuchAlgorithmException | KeyManagementException e) {
+      e.printStackTrace();
+      client = HttpClients.createDefault();
+    }
+    httpClient = client;
+  }
 
   public static TransactionList getTransactions() {
     Request request = new Request.Builder()
@@ -63,32 +77,6 @@ public class APIHandler {
     return new CommandQueue();
   }
 
-  private static class RemoveIDs {
-    private final String removeIds;
-    public RemoveIDs(int[] ids) {
-      removeIds = Arrays.toString(ids).replace(" ", "");
-    }
-
-    public String getRemoveIds() {
-      return removeIds;
-    }
-  }
-
-  private static final HttpClient httpClient;
-
-  static {
-    HttpClient client;
-    try {
-      SSLContext context = SSLContext.getInstance("TLSv1.2");
-      context.init(null, null, null);
-      client = HttpClients.custom().setSSLContext(context).build();
-    } catch (NoSuchAlgorithmException | KeyManagementException e) {
-      e.printStackTrace();
-      client = HttpClients.createDefault();
-    }
-    httpClient = client;
-  }
-
   public static boolean complete(int[] ids) {
     ObjectMapper mapper = new ObjectMapper();
     HttpPost req = new HttpPost("https://api.craftingstore.net/v4/queue/markComplete");
@@ -106,6 +94,18 @@ public class APIHandler {
       return false;
     }
     return true;
+  }
+
+  private static class RemoveIDs {
+    private final String removeIds;
+
+    public RemoveIDs(int[] ids) {
+      removeIds = Arrays.toString(ids).replace(" ", "");
+    }
+
+    public String getRemoveIds() {
+      return removeIds;
+    }
   }
 
 }
